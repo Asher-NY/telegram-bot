@@ -1,0 +1,11 @@
+OPEN_AI_API = 
+TG_API = 
+
+FIREBASE_apiKey=""
+FIREBASE_authDomain=""
+FIREBASE_projectId=""
+FIREBASE_storageBucket=""
+FIREBASE_messagingSenderId=""
+FIREBASE_appId=""
+FIREBASE_measurementId=""
+
