@@ -5,6 +5,7 @@ import 'dotenv/config'
 import FireBase from "./firebase/FireBase";
 import OpenAI from "./openai/OpenAI";
 import MsgCashe from "./uitls/MsgCashe";
+import Config from "./config/Config";
 
 console.log('启动完成');
 
@@ -20,13 +21,35 @@ bot.start((ctx) => ctx.reply('欢迎温柔又善良的小哥哥/小姐姐,如有
 
 bot.help((ctx) => {
     ctx.reply(
-        "目前支持下面的命令 \n /image -> 创建图片 \n /ask -> 提问AI "
+        "目前支持下面的命令 \n /image -> 创建图片 \n /ask -> 提问AI \n 如有问题，请联系大帅哥 @asher_hp "
     );
 });
 
 bot.hears('我爱asher', (ctx) => ctx.reply('我也爱你'));
 
+bot.command("myid", async (ctx) => {
+    ctx.reply("您的用户ID为：" + ctx.from.id);
+});
+
+bot.command("balance", async (ctx) => {
+    let num = await FireBase.queryBalance(ctx.from.id.toString());
+    let freeNum = await FireBase.queryBalance(ctx.from.id.toString(), true);
+    let msg = `您的使用次数剩余：${num}\n每日免费使用次数剩余:${Config.DAILY_MAX_TIMES - freeNum}`;
+
+    ctx.reply(msg);
+});
+
 bot.command("ask", async (ctx) => {
+    console.log("uid:", ctx.from.id);
+
+    let flag = await FireBase.queryIsAllowed(ctx.from.id.toString());
+    if (!flag) {
+        ctx.reply("你的使用次数不足，请联系 @asher_hp 充值", {
+            reply_to_message_id: ctx.message.message_id,
+        });
+        return;
+    }
+
     if (isQuerying) {
         MsgCashe.addMsg(ctx);
     }
@@ -47,6 +70,9 @@ bot.command("image", async (ctx) => {
             ctx.telegram.sendPhoto(ctx.message.chat.id, res, {
                 reply_to_message_id: ctx.message.message_id,
             });
+
+            //回答完在扣费，目前不严谨，会有负数的情况出现
+            FireBase.consumeOnce(ctx.from.id.toString());
         }
         else {
             ctx.reply("图片生成失败，不支持生成敏感图", {
@@ -77,6 +103,8 @@ async function getMsg(ctx: any) {
             reply_to_message_id: ctx.message.message_id,
         });
 
+        //回答完在扣费，目前不严谨，会有负数的情况出现
+        FireBase.consumeOnce(ctx.from.id.toString());
 
     } else {
         ctx.telegram.sendMessage(
@@ -144,3 +172,4 @@ bot.on(message("text"), ctx => {
 });
 
 bot.launch();
+

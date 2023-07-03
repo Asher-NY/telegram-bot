@@ -2,6 +2,7 @@
 import { FirebaseApp, initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, update, remove, onValue, orderByChild, equalTo, query, orderByKey, DatabaseReference } from 'firebase/database';
 import { User, getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import Config from "../config/Config";
 
 export default class FireBase {
     static app: FirebaseApp;
@@ -99,14 +100,50 @@ export default class FireBase {
         // });
 
 
-        // this.updateBalance("gv2Glnp82pVQx0qy3mdG8RueCn92", 99999);
+        // this.updateBalance("6165347601", 99999);
         // let a = await this.queryBalance("gv2Glnp82pVQx0qy3mdG8RueCn92");
         // console.log(a);
 
     }
 
+    /**消耗一次余额 */
+    static async consumeOnce(uid: string) {
+
+        return new Promise<number>((resolve, reject) => {
+            // 创建查询
+            const queryRef = query(this.usersRef, orderByKey(), equalTo(uid));
+
+            // 执行查询
+            onValue(queryRef, (snapshot) => {
+
+                let updatedData = snapshot.val();
+                if (!updatedData) {
+                    updatedData = {};
+                    updatedData[uid] = {
+                        balance: 0,
+                        freeTimes: 0
+                    };
+                }
+                else {
+                    if (updatedData[uid].balance > 0) {
+                        updatedData[uid].balance--;
+                    }
+                    else {
+                        updatedData[uid].freeTimes++;
+                    }
+                }
+
+                // 更新数据
+                update(this.usersRef, updatedData);
+            }, (error) => {
+                console.log("onValue err:", error);
+            }, { onlyOnce: true });
+        });
+
+    }
+
     /**更新用户余额 */
-    static async updateBalance(uid: string, balance: number): Promise<any> {
+    static async updateBalance(uid: string, balance: number, isFree?: boolean): Promise<any> {
 
         return new Promise<number>((resolve, reject) => {
             // 创建查询
@@ -120,11 +157,17 @@ export default class FireBase {
                 if (!updatedData) {
                     updatedData = {};
                     updatedData[uid] = {
-                        balance: balance
+                        balance: balance,
+                        freeTimes: 0
                     };
                 }
                 else {
-                    updatedData[uid].balance = balance;
+                    if (isFree) {
+                        updatedData[uid].freeTimes = balance;
+                    }
+                    else {
+                        updatedData[uid].balance = balance;
+                    }
                 }
 
                 // 更新数据
@@ -145,7 +188,7 @@ export default class FireBase {
 
     }
 
-    static async queryBalance(uid: string): Promise<number> {
+    static async queryBalance(uid: string, isFree?: boolean): Promise<number> {
         return new Promise<number>((resolve, reject) => {
             const queryRef = query(this.usersRef, orderByKey(), equalTo(uid));
 
@@ -153,13 +196,41 @@ export default class FireBase {
                 let updatedData = snapshot.val();
                 if (updatedData) {
                     // console.log(updatedData[uid]);
+                    if (isFree) {
+                        return resolve(updatedData[uid].freeTimes);
+                    }
+                    else {
+                        return resolve(updatedData[uid].balance);
+                    }
 
-                    return resolve(updatedData[uid].balance);
                 } else {
                     return resolve(0);
                 }
             }, (err) => {
                 return resolve(0);
+            }, { onlyOnce: true });
+        });
+    }
+
+    /**检测是否余额充足或者有免费次数 */
+    static async queryIsAllowed(uid: string): Promise<boolean> {
+        return new Promise<boolean>((resolve, reject) => {
+            const queryRef = query(this.usersRef, orderByKey(), equalTo(uid));
+
+            onValue(queryRef, (snapshot) => {
+                let updatedData = snapshot.val();
+                if (updatedData) {
+                    return resolve(
+                        updatedData[uid].freeTimes < Config.DAILY_MAX_TIMES ||
+                        updatedData[uid].balance > 0
+                    )
+
+                } else {
+                    //没有数据，表示新用户，可以免费使用
+                    return resolve(true);
+                }
+            }, (err) => {
+                return resolve(false);
             }, { onlyOnce: true });
         });
     }
