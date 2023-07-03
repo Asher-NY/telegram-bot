@@ -3,6 +3,8 @@ import { Telegraf } from "telegraf";
 import { message } from 'telegraf/filters';
 import 'dotenv/config'
 import FireBase from "./firebase/FireBase";
+import OpenAI from "./openai/OpenAI";
+import MsgCashe from "./uitls/MsgCashe";
 
 console.log('启动完成');
 
@@ -11,66 +13,133 @@ FireBase.init();
 const BOT_TOKEN: any = process.env.TG_API;
 
 const bot = new Telegraf(BOT_TOKEN);
+/**是否正在请求消息 */
+let isQuerying: boolean;
 
-bot.start((ctx) => ctx.reply('Welcome！'));
+bot.start((ctx) => ctx.reply('欢迎温柔又善良的小哥哥/小姐姐,如有问题，请联系大帅哥 @asher_hp'));
 
 bot.help((ctx) => {
     ctx.reply(
-        "This bot can perform the following command \n /image -> to create image from text \n /ask -> ank anything from me "
+        "目前支持下面的命令 \n /image -> 创建图片 \n /ask -> 提问AI "
     );
 });
 
-bot.hears('hi', (ctx) => ctx.reply('Hey there'));
+bot.hears('我爱asher', (ctx) => ctx.reply('我也爱你'));
 
-
-
-// bot.command('oldschool', (ctx) => ctx.reply('Hello'));
-// bot.command('hipster', Telegraf.reply('λ'));
-
-
-bot.command('createPoll', (ctx) => {
-    const options = ['Option 1', 'Option 2', 'Option 3']; // 投票选项数组
-
-    // 创建投票
-    ctx.replyWithPoll('What is your favorite option?', options, {
-        is_anonymous: false, // 是否匿名，默认为 true
-        allows_multiple_answers: true, // 是否允许多选，默认为 false
-    });
+bot.command("ask", async (ctx) => {
+    if (isQuerying) {
+        MsgCashe.addMsg(ctx);
+    }
+    else {
+        getMsg(ctx);
+    }
 });
 
-bot.command('showKeyboard', (ctx) => {
-    // 设置键盘布局
-    const keyboard = [
-        [{ text: 'Option 1' }, { text: 'Option 2' }],
-        [{ text: 'Option 3' }],
-    ];
+bot.command("image", async (ctx) => {
+    const text = ctx.message.text?.replace("/image", "")?.trim().toLowerCase();
 
-    // 发送带有底部键盘的消息
-    ctx.reply('Choose an option:', {
-        reply_markup: {
-            keyboard,
-            resize_keyboard: true, // 是否调整键盘大小，默认为 false
-            one_time_keyboard: true, // 是否一次性显示键盘，默认为 false
-        },
-    });
+    if (text) {
+
+        const res = await OpenAI.getImage(text);
+
+        if (res) {
+            ctx.sendChatAction("upload_photo");
+            ctx.telegram.sendPhoto(ctx.message.chat.id, res, {
+                reply_to_message_id: ctx.message.message_id,
+            });
+        }
+        else {
+            ctx.reply("图片生成失败，不支持生成敏感图", {
+                reply_to_message_id: ctx.message.message_id,
+            });
+        }
+    } else {
+        ctx.telegram.sendMessage(
+            ctx.message.chat.id,
+            "请在 /image 后面输入图片的描述",
+            {
+                reply_to_message_id: ctx.message.message_id,
+            }
+        );
+    }
 });
+
+
+async function getMsg(ctx: any) {
+    isQuerying = true;
+    const text = ctx.message.text?.replace("/ask", "")?.trim().toLowerCase();
+
+    if (text) {
+        ctx.sendChatAction("typing");
+        const msg = await OpenAI.getChatEx(text);
+
+        ctx.reply(msg, {
+            reply_to_message_id: ctx.message.message_id,
+        });
+
+
+    } else {
+        ctx.telegram.sendMessage(
+            ctx.message.chat.id,
+            "请在 /ask 命令后面输入你想说的话",
+            {
+                reply_to_message_id: ctx.message.message_id,
+            }
+        );
+    }
+
+    isQuerying = false;
+    let msg = MsgCashe.getMsg();
+    if (msg) {
+        getMsg(msg);
+    }
+
+}
+
+// bot.command('createPoll', (ctx) => {
+//     const options = ['Option 1', 'Option 2', 'Option 3']; // 投票选项数组
+
+//     // 创建投票
+//     ctx.replyWithPoll('What is your favorite option?', options, {
+//         is_anonymous: false, // 是否匿名，默认为 true
+//         allows_multiple_answers: true, // 是否允许多选，默认为 false
+//     });
+// });
+
+// bot.command('showKeyboard', (ctx) => {
+//     // 设置键盘布局
+//     const keyboard = [
+//         [{ text: 'Option 1' }, { text: 'Option 2' }],
+//         [{ text: 'Option 3' }],
+//     ];
+
+//     // 发送带有底部键盘的消息
+//     ctx.reply('Choose an option:', {
+//         reply_markup: {
+//             keyboard,
+//             resize_keyboard: true, // 是否调整键盘大小，默认为 false
+//             one_time_keyboard: true, // 是否一次性显示键盘，默认为 false
+//         },
+//     });
+// });
 
 
 
 bot.on(message("text"), ctx => {
     console.log(ctx.message.text);
+    ctx.reply("不支持的格式，如有问题输入 /help 查看说明")
 
     // 发送一个带有 "like" 和 "dislike" 按钮的消息
-    ctx.reply('Do you like this message?', {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: 'Like', callback_data: 'like' },
-                    { text: 'Dislike', callback_data: 'dislike' },
-                ],
-            ],
-        },
-    });
+    // ctx.reply('Do you like this message?', {
+    //     reply_markup: {
+    //         inline_keyboard: [
+    //             [
+    //                 { text: 'Like', callback_data: 'like' },
+    //                 { text: 'Dislike', callback_data: 'dislike' },
+    //             ],
+    //         ],
+    //     },
+    // });
 
 });
 
