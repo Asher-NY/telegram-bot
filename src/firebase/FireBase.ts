@@ -3,6 +3,7 @@ import { FirebaseApp, initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, update, remove, onValue, orderByChild, equalTo, query, orderByKey, DatabaseReference } from 'firebase/database';
 import { User, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import Config from "../config/Config";
+import { formatTime } from "../uitls/Tools";
 
 export default class FireBase {
     static app: FirebaseApp;
@@ -121,7 +122,7 @@ export default class FireBase {
                     updatedData = {};
                     updatedData[uid] = {
                         balance: 0,
-                        freeTimes: 0
+                        freeTimes: 1
                     };
                 }
                 else {
@@ -132,6 +133,7 @@ export default class FireBase {
                         updatedData[uid].freeTimes++;
                     }
                 }
+                updatedData[uid].lastRequestTime = formatTime(Date.now(), "yyyy-MM-dd");
 
                 // 更新数据
                 update(this.usersRef, updatedData);
@@ -158,7 +160,8 @@ export default class FireBase {
                     updatedData = {};
                     updatedData[uid] = {
                         balance: balance,
-                        freeTimes: 0
+                        freeTimes: 0,
+                        // lastRequestTime: formatTime(Date.now(), "yyyy-MM-dd"),
                     };
                 }
                 else {
@@ -169,6 +172,7 @@ export default class FireBase {
                         updatedData[uid].balance = balance;
                     }
                 }
+                updatedData[uid].lastRequestTime = formatTime(Date.now(), "yyyy-MM-dd");
 
                 // 更新数据
                 update(this.usersRef, updatedData)
@@ -220,9 +224,10 @@ export default class FireBase {
             onValue(queryRef, (snapshot) => {
                 let updatedData = snapshot.val();
                 if (updatedData) {
+                    let data = updatedData[uid];
                     return resolve(
-                        updatedData[uid].freeTimes < Config.DAILY_MAX_TIMES ||
-                        updatedData[uid].balance > 0
+                        data.balance > 0 ||
+                        (data.lastRequestTime != formatTime(Date.now(), "yyyy-MM-dd") || data.freeTimes < Config.DAILY_MAX_TIMES)
                     )
 
                 } else {

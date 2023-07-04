@@ -71,11 +71,17 @@ export default class OpenAI {
             console.log("openai返回:", response.data.choices);
             return response.data.choices[0].message.content;
         } catch (error: any) {
-            console.error('发生错误:', error.response.status);
-            if (error.response.status === 429) {
-                return "官人你太快了，请慢点";
+            if (error.response) {
+                console.error('发生错误:', error.response.status);
+                if (error.response.status === 429) {
+                    return "官人你太快了，请慢点";
+                }
+                return error.response.statusText || error.message;
             }
-            return error.response.statusText || error.message;
+            else {
+                return error.message;
+            }
+
         }
     }
 }

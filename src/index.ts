@@ -34,13 +34,12 @@ bot.command("myid", async (ctx) => {
 bot.command("balance", async (ctx) => {
     let num = await FireBase.queryBalance(ctx.from.id.toString());
     let freeNum = await FireBase.queryBalance(ctx.from.id.toString(), true);
-    let msg = `您的使用次数剩余：${num}\n每日免费使用次数剩余:${Config.DAILY_MAX_TIMES - freeNum}`;
+    let msg = `您的使用次数剩余：${num}\n每日免费使用次数剩余：${Config.DAILY_MAX_TIMES - freeNum}`;
 
     ctx.reply(msg);
 });
 
 bot.command("ask", async (ctx) => {
-    console.log("uid:", ctx.from.id);
 
     let flag = await FireBase.queryIsAllowed(ctx.from.id.toString());
     if (!flag) {
@@ -59,6 +58,14 @@ bot.command("ask", async (ctx) => {
 });
 
 bot.command("image", async (ctx) => {
+    let flag = await FireBase.queryIsAllowed(ctx.from.id.toString());
+    if (!flag) {
+        ctx.reply("你的使用次数不足，请联系 @asher_hp 充值", {
+            reply_to_message_id: ctx.message.message_id,
+        });
+        return;
+    }
+    
     const text = ctx.message.text?.replace("/image", "")?.trim().toLowerCase();
 
     if (text) {
