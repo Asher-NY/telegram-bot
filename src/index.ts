@@ -17,11 +17,20 @@ const bot = new Telegraf(BOT_TOKEN);
 /**是否正在请求消息 */
 let isQuerying: boolean;
 
-bot.start((ctx) => ctx.reply('欢迎温柔又善良的小哥哥/小姐姐,如有问题，请联系大帅哥 @asher_hp'));
+bot.start((ctx) => ctx.reply('欢迎温柔又善良的小哥哥/小姐姐,如有问题，请联系大帅哥 @asher_hp \n Welcome, kind-hearted and gentle sir/madam. If you have any questions, please contact the handsome @asher_hp'));
 
 bot.help((ctx) => {
     ctx.reply(
-        "目前支持下面的命令 \n /image -> 创建图片 \n /ask -> 提问AI \n 如有问题，请联系大帅哥 @asher_hp "
+        `目前支持下面的命令 
+        /image -> 创建图片 
+        /ask -> 提问AI 
+        如有问题，请联系大帅哥 @asher_hp 
+
+        Currently supported commands are:
+        /image -> Create an image
+        /ask -> Ask the AI
+        If you have any questions, please contact the handsome @asher_hp.
+        `
     );
 });
 
@@ -65,7 +74,7 @@ bot.command("image", async (ctx) => {
         });
         return;
     }
-    
+
     const text = ctx.message.text?.replace("/image", "")?.trim().toLowerCase();
 
     if (text) {
