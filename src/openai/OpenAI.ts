@@ -48,16 +48,16 @@ export default class OpenAI {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.OPEN_AI_API}`
                 },
-                timeout: 15000,
+                timeout: 60000,
             };
 
             const data = {
                 model: 'gpt-3.5-turbo-0613',
                 messages: [
-                    { "role": "system", "content": "You are a helpful assistant." },
-                    { role: 'user', content: text }
+                    { "role": "assistant", "content": "You are a helpful assistant." },
+                    { "role": 'user', "content": text }
                 ],
-                top_p: 0.7,
+                top_p: 0.5,
                 max_tokens: 4000,
             };
 

@@ -21,16 +21,14 @@ bot.start((ctx) => ctx.reply('欢迎温柔又善良的小哥哥/小姐姐,如有
 
 bot.help((ctx) => {
     ctx.reply(
-        `目前支持下面的命令 
-        /image -> 创建图片 
-        /ask -> 提问AI 
-        如有问题，请联系大帅哥 @asher_hp 
+`目前支持下面的命令 
+/image -> 创建图片 
+如有问题，请联系大帅哥 @asher_hp 
 
-        Currently supported commands are:
-        /image -> Create an image
-        /ask -> Ask the AI
-        If you have any questions, please contact the handsome @asher_hp.
-        `
+Currently supported commands are:
+/image -> Create an image
+If you have any questions, please contact the handsome @asher_hp.
+`
     );
 });
 
@@ -48,23 +46,23 @@ bot.command("balance", async (ctx) => {
     ctx.reply(msg);
 });
 
-bot.command("ask", async (ctx) => {
+// bot.command("ask", async (ctx) => {
 
-    let flag = await FireBase.queryIsAllowed(ctx.from.id.toString());
-    if (!flag) {
-        ctx.reply("你的使用次数不足，请联系 @asher_hp 充值", {
-            reply_to_message_id: ctx.message.message_id,
-        });
-        return;
-    }
+//     let flag = await FireBase.queryIsAllowed(ctx.from.id.toString());
+//     if (!flag) {
+//         ctx.reply("你的使用次数不足，请联系 @asher_hp 充值", {
+//             reply_to_message_id: ctx.message.message_id,
+//         });
+//         return;
+//     }
 
-    if (isQuerying) {
-        MsgCashe.addMsg(ctx);
-    }
-    else {
-        getMsg(ctx);
-    }
-});
+//     if (isQuerying) {
+//         MsgCashe.addMsg(ctx);
+//     }
+//     else {
+//         getMsg(ctx);
+//     }
+// });
 
 bot.command("image", async (ctx) => {
     let flag = await FireBase.queryIsAllowed(ctx.from.id.toString());
@@ -169,9 +167,25 @@ async function getMsg(ctx: any) {
 
 
 
-bot.on(message("text"), ctx => {
+bot.on(message("text"), async ctx => {
     console.log(ctx.message.text);
-    ctx.reply("不支持的格式，如有问题输入 /help 查看说明")
+    // ctx.reply("不支持的格式，如有问题输入 /help 查看说明")
+
+
+    let flag = await FireBase.queryIsAllowed(ctx.from.id.toString());
+    if (!flag) {
+        ctx.reply("你的使用次数不足，请联系 @asher_hp 充值", {
+            reply_to_message_id: ctx.message.message_id,
+        });
+        return;
+    }
+
+    if (isQuerying) {
+        MsgCashe.addMsg(ctx);
+    }
+    else {
+        getMsg(ctx);
+    }
 
     // 发送一个带有 "like" 和 "dislike" 按钮的消息
     // ctx.reply('Do you like this message?', {
