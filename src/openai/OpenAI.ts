@@ -52,13 +52,13 @@ export default class OpenAI {
             };
 
             const data = {
-                model: 'gpt-3.5-turbo-0613',
+                model: 'gpt-3.5-turbo', //gpt-3.5-turbo-0613
                 messages: [
                     { "role": "assistant", "content": "You are a helpful assistant." },
                     { "role": 'user', "content": text }
                 ],
                 top_p: 0.5,
-                max_tokens: 4000,
+                // max_tokens: 4000,
             };
 
             const response: AxiosResponse = await axios.post(
