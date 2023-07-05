@@ -117,6 +117,8 @@ export default class FireBase {
             // 执行查询
             onValue(queryRef, (snapshot) => {
 
+                let now = formatTime(Date.now(), "yyyy-MM-dd");
+
                 let updatedData = snapshot.val();
                 if (!updatedData) {
                     updatedData = {};
@@ -130,10 +132,15 @@ export default class FireBase {
                         updatedData[uid].balance--;
                     }
                     else {
-                        updatedData[uid].freeTimes++;
+                        if(now == updatedData[uid].lastRequestTime){
+                            updatedData[uid].freeTimes++; 
+                        }
+                        else{
+                            updatedData[uid].freeTimes = 1; //不是同一天重置免费次数
+                        }
                     }
                 }
-                updatedData[uid].lastRequestTime = formatTime(Date.now(), "yyyy-MM-dd");
+                updatedData[uid].lastRequestTime = now;
 
                 // 更新数据
                 update(this.usersRef, updatedData);
