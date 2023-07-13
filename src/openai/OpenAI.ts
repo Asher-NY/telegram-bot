@@ -1,6 +1,9 @@
 
 import { Configuration, OpenAIApi } from "openai"
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import Config from "../config/Config";
+import MsgMgr, { Message } from "./MsgMgr";
+import * as wordCount from '../uitls/OpenAIUtil';
 
 
 export default class OpenAI {
@@ -41,7 +44,7 @@ export default class OpenAI {
     };
 
     //更省token的请求模型
-    static async getChatEx(text: string): Promise<string> {
+    static async getChatEx(text: string, userId: any): Promise<string> {
         try {
             const config: AxiosRequestConfig = {
                 headers: {
@@ -51,21 +54,43 @@ export default class OpenAI {
                 timeout: 60000,
             };
 
+            let totalLen = 0;
+            let msgs = MsgMgr.getMsg(userId);
+
+            let prompts: Message[] = []
+            for (let i = msgs.length - 1; i >= 0; i--) {
+                const msg = msgs[i]
+                const msgTokenSize: number = wordCount.estimateTokens(msg.content) + 200 // 200 作为预估的误差补偿
+                if (msgTokenSize + totalLen > Config.MAX_CONTEXT_SIZE) {
+                    break;
+                }
+                prompts = [msg, ...prompts];
+                totalLen += msgTokenSize;
+            }
+            // console.log(totalLen, prompts);
+
+
             const data = {
-                model: 'gpt-3.5-turbo', //gpt-3.5-turbo-0613
+                model: Config.OPENAI_MODEL,
                 messages: [
-                    { "role": "assistant", "content": "You are a helpful assistant." },
+
+                    { "role": "system", "content": "You are a helpful assistant. You can help me by answering my questions. You can also ask me questions." },
+                    ...prompts,
                     { "role": 'user', "content": text }
                 ],
-                top_p: 0.5,
-                // max_tokens: 4000,
+                top_p: Config.TOP_P,
+                max_tokens: Config.MAX_TOKEN,
+                // stream: true,
             };
+
 
             const response: AxiosResponse = await axios.post(
                 'https://api.openai.com/v1/chat/completions',
                 data,
                 config
             );
+
+            MsgMgr.addMsg(userId, { role: 'user', content: text }, response.data.choices[0].message);
 
             // 解析并打印 OpenAI 返回的回复
             console.log("openai返回:", response.data.choices);
@@ -84,4 +109,42 @@ export default class OpenAI {
 
         }
     }
+
+    /*static async handleSSE(response: Response, onMessage: (message: string) => void) {
+        if (!response.ok) {
+            const error = await response.json().catch(() => null)
+            throw new Error(error ? JSON.stringify(error) : `${response.status} ${response.statusText}`)
+        }
+        if (response.status !== 200) {
+            throw new Error(`Error from OpenAI: ${response.status} ${response.statusText}`)
+        }
+        if (!response.body) {
+            throw new Error('No response body')
+        }
+        const parser = createParser((event) => {
+            if (event.type === 'event') {
+                onMessage(event.data)
+            }
+        })
+        for await (const chunk of this.iterableStreamAsync(response.body)) {
+            const str = new TextDecoder().decode(chunk)
+            parser.feed(str)
+        }
+    }
+
+    static async * iterableStreamAsync(stream: ReadableStream): AsyncIterableIterator<Uint8Array> {
+        const reader = stream.getReader();
+        try {
+            while (true) {
+                const { value, done } = await reader.read()
+                if (done) {
+                    return
+                } else {
+                    yield value
+                }
+            }
+        } finally {
+            reader.releaseLock()
+        }
+    }*/
 }

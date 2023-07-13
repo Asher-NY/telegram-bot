@@ -1,5 +1,5 @@
 
-import { Telegraf } from "telegraf";
+import { Context, Telegraf } from "telegraf";
 import { message } from 'telegraf/filters';
 import 'dotenv/config'
 import FireBase from "./firebase/FireBase";
@@ -21,7 +21,7 @@ bot.start((ctx) => ctx.reply('欢迎温柔又善良的小哥哥/小姐姐,如有
 
 bot.help((ctx) => {
     ctx.reply(
-`目前支持下面的命令 
+        `目前支持下面的命令 
 /image -> 创建图片 
 如有问题，请联系大帅哥 @asher_hp 
 
@@ -107,11 +107,11 @@ bot.command("image", async (ctx) => {
 
 async function getMsg(ctx: any) {
     isQuerying = true;
-    const text = ctx.message.text?.replace("/ask", "")?.trim().toLowerCase();
+    const text = ctx.message.text?.replace("/", "")?.trim().toLowerCase();
 
     if (text) {
         ctx.sendChatAction("typing");
-        const msg = await OpenAI.getChatEx(text);
+        const msg = await OpenAI.getChatEx(text, ctx.from.id);
 
         ctx.reply(msg, {
             reply_to_message_id: ctx.message.message_id,
@@ -123,7 +123,7 @@ async function getMsg(ctx: any) {
     } else {
         ctx.telegram.sendMessage(
             ctx.message.chat.id,
-            "请在 /ask 命令后面输入你想说的话",
+            "请说出你的心里话",
             {
                 reply_to_message_id: ctx.message.message_id,
             }
@@ -167,9 +167,13 @@ async function getMsg(ctx: any) {
 
 
 
+
 bot.on(message("text"), async ctx => {
     console.log(ctx.message.text);
     // ctx.reply("不支持的格式，如有问题输入 /help 查看说明")
+    if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
+        ctx.message.text = ctx.message.text.replace(`@${bot.botInfo?.username}`, "");
+    }
 
 
     let flag = await FireBase.queryIsAllowed(ctx.from.id.toString());
@@ -203,3 +207,7 @@ bot.on(message("text"), async ctx => {
 
 bot.launch();
 
+
+// Enable graceful stop
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
